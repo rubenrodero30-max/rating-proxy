@@ -1,46 +1,40 @@
-import fs from 'fs';
-import path from 'path';
+import { Redis } from "@upstash/redis";
 
-export default function handler(req, res) {
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_KV_REST_API_URL,
+  token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN,
+});
 
-  // CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+export default async function handler(req, res) {
+  if (req.method === "GET") {
+    const votes = await redis.get("votes") || 0;
+    const total = await redis.get("total") || 0;
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
+    const avg = votes === 0 ? 0 : total / votes;
+
+    return res.status(200).json({
+      avg: Number(avg.toFixed(2)),
+      votes,
+    });
   }
 
-  const filePath = path.join(process.cwd(), 'votes.json');
-  const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-  if (req.method === 'POST') {
-    const rating = parseInt(req.body.rating);
+  if (req.method === "POST") {
+    const { rating } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: 'Invalid rating' });
+      return res.status(400).json({ error: "Rating inválido" });
     }
 
-    data.votes.push(rating);
-    data.total = data.votes.length;
-    data.avg = data.votes.reduce((a, b) => a + b, 0) / data.total;
+    const votes = await redis.incr("votes");
+    const total = await redis.incrby("total", rating);
 
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    const avg = total / votes;
 
     return res.status(200).json({
-      success: true,
-      avg: data.avg,
-      votes: data.total
+      avg: Number(avg.toFixed(2)),
+      votes,
     });
   }
 
-  if (req.method === 'GET') {
-    return res.status(200).json({
-      avg: data.avg,
-      votes: data.total
-    });
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
+  return res.status(405).json({ error: "Método no permitido" });
 }
