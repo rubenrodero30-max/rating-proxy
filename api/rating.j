@@ -1,11 +1,17 @@
-res.setHeader("Access-Control-Allow-Origin", "*");
-res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
 import fs from 'fs';
 import path from 'path';
 
 export default function handler(req, res) {
+
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   const filePath = path.join(process.cwd(), 'votes.json');
   const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
@@ -38,4 +44,3 @@ export default function handler(req, res) {
 
   return res.status(405).json({ error: 'Method not allowed' });
 }
-
