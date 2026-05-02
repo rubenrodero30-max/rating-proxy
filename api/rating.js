@@ -11,6 +11,11 @@ const redis = new Redis({
 
 export default async function handler(req) {
   const origin = req.headers.get("origin");
+  const { searchParams } = new URL(req.url);
+  const item = searchParams.get("item") || "default";
+
+  const votesKey = `votes_${item}`;
+  const totalKey = `total_${item}`;
 
   const corsHeaders = {
     "Access-Control-Allow-Origin": origin || "*",
@@ -24,8 +29,8 @@ export default async function handler(req) {
   }
 
   if (req.method === "GET") {
-    const votes = (await redis.get("votes")) || 0;
-    const total = (await redis.get("total")) || 0;
+    const votes = (await redis.get(votesKey)) || 0;
+    const total = (await redis.get(totalKey)) || 0;
     const avg = votes === 0 ? 0 : total / votes;
 
     return new Response(
@@ -45,11 +50,11 @@ export default async function handler(req) {
       });
     }
 
-    await redis.incr("votes");
-    await redis.incrby("total", rating);
+    await redis.incr(votesKey);
+    await redis.incrby(totalKey, rating);
 
-    const votes = (await redis.get("votes")) || 0;
-    const total = (await redis.get("total")) || 0;
+    const votes = (await redis.get(votesKey)) || 0;
+    const total = (await redis.get(totalKey)) || 0;
     const avg = votes === 0 ? 0 : total / votes;
 
     return new Response(
