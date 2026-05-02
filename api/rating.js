@@ -10,12 +10,13 @@ const redis = new Redis({
 });
 
 export default async function handler(req) {
-  const origin = req.headers.get("origin") || "*";
+  const origin = req.headers.get("origin");
 
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "https://rutarp.great-site.net",
+    "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Credentials": "true",
   };
 
   if (req.method === "OPTIONS") {
